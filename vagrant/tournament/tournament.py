@@ -68,11 +68,11 @@ def playerStandings():
     c = DB.cursor()
     c.execute("CREATE VIEW idwin AS SELECT id, name, count(matches.win) as wins FROM players LEFT JOIN matches on players.id = matches.win GROUP BY id")
     c.execute("CREATE VIEW idlose AS SELECT id, count(matches.lose) as loses FROM players LEFT JOIN matches on players.id = matches.lose GROUP BY id ")
-    c.execute("SELECT idwin.id , name, wins, loses FROM idwin JOIN idlose ON idwin.id=idlose.id")
-    standings = ({'id':row[0], 'name': row[1], 'wins': row[2], 'matches': (row[2]+row[3])}
-            for row in c.fetchall())
+    c.execute("SELECT idwin.id , name, wins, loses FROM idwin JOIN idlose ON idwin.id=idlose.id ORDER BY wins")
+
+    standings = [(row[0], row[1], row[2], row[2]+row[3]) for row in c.fetchall()]
     DB.close()
-    return standings
+    return tuple(standings)
 
 def reportMatch(winner, loser):
     """Records the outcome of a single match between two players.
@@ -81,7 +81,11 @@ def reportMatch(winner, loser):
       winner:  the id number of the player who won
       loser:  the id number of the player who lost
     """
- 
+    DB = connect()
+    c = DB.cursor()
+    c.execute("INSERT INTO matches VALUES (%s,%s)", (winner,loser))
+    DB.commit()
+    DB.close()
  
 def swissPairings():
     """Returns a list of pairs of players for the next round of a match.
@@ -98,5 +102,6 @@ def swissPairings():
         id2: the second player's unique id
         name2: the second player's name
     """
-
-
+    standings = playerStandings()
+    pairs = [(standings[i-1][0:2]+standings[i][0:2]) for i in range(1,len(standings),2)]
+    return pairs
