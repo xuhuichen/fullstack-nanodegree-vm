@@ -13,15 +13,28 @@ def connect():
 
 def deleteMatches():
     """Remove all the match records from the database."""
-
+    DB = connect()
+    c = DB.cursor()
+    c.execute("DELETE FROM matches")
+    DB.commit()
+    DB.close()
 
 def deletePlayers():
     """Remove all the player records from the database."""
-
+    DB = connect()
+    c = DB.cursor()
+    c.execute("DELETE FROM players")
+    DB.commit()
+    DB.close()
 
 def countPlayers():
     """Returns the number of players currently registered."""
-
+    DB = connect()
+    c = DB.cursor()
+    c.execute("SELECT count(*) FROM players")
+    row = c.fetchone()
+    DB.close()
+    return row[0]
 
 def registerPlayer(name):
     """Adds a player to the tournament database.
@@ -32,7 +45,11 @@ def registerPlayer(name):
     Args:
       name: the player's full name (need not be unique).
     """
-
+    DB = connect()
+    c = DB.cursor()
+    c.execute("INSERT INTO players (name) VALUES (%s)", (name,))
+    DB.commit()
+    DB.close()
 
 def playerStandings():
     """Returns a list of the players and their win records, sorted by wins.
@@ -47,7 +64,15 @@ def playerStandings():
         wins: the number of matches the player has won
         matches: the number of matches the player has played
     """
-
+    DB = connect()
+    c = DB.cursor()
+    c.execute("CREATE VIEW idwin AS SELECT id, name, count(matches.win) as wins FROM players LEFT JOIN matches on players.id = matches.win GROUP BY id")
+    c.execute("CREATE VIEW idlose AS SELECT id, count(matches.lose) as loses FROM players LEFT JOIN matches on players.id = matches.lose GROUP BY id ")
+    c.execute("SELECT idwin.id , name, wins, loses FROM idwin JOIN idlose ON idwin.id=idlose.id")
+    standings = ({'id':row[0], 'name': row[1], 'wins': row[2], 'matches': (row[2]+row[3])}
+            for row in c.fetchall())
+    DB.close()
+    return standings
 
 def reportMatch(winner, loser):
     """Records the outcome of a single match between two players.
